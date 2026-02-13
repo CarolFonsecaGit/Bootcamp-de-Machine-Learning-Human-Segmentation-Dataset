@@ -1,32 +1,33 @@
 import os
-import pandas as pd
+import numpy as np
+from PIL import Image
 
-# --- DISTRIBUIÇÃO DAS CLASSES ---
+print("--- Análise Real de Distribuição das Classes (Segmentação) ---")
 
-# Configurações de caminho
+# Caminho base
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+MASKS_PATH = os.path.join(BASE_PATH, "segmentation_full_body_tik_tok_2615_img", "masks")
 
-# Carregar o DataFrame
-df = pd.read_csv(os.path.join(BASE_PATH, "df.csv"))
+pixel_counts = {}
 
-print("--- Análise de Distribuição ---")
+# Percorrer todas as máscaras
+for mask_file in os.listdir(MASKS_PATH):
+    mask_path = os.path.join(MASKS_PATH, mask_file)
 
-# Nota: Como o df.csv padrão não possui uma coluna 'label', 
-# este código verifica se ela existe antes de tentar contar.
-# Se o seu dataset usar outro nome (ex: 'categoria', 'class'), altere abaixo.
+    mask = Image.open(mask_path)
+    mask_array = np.array(mask)
 
-target_column = 'label' 
+    unique, counts = np.unique(mask_array, return_counts=True)
 
-if target_column in df.columns:
-    print(f"\nDistribuição da coluna '{target_column}':")
-    contagem = df[target_column].value_counts()
-    percentual = df[target_column].value_counts(normalize=True) * 100
-    
-    df_dist = pd.DataFrame({'Quantidade': contagem, 'Percentual (%)': percentual})
-    print(df_dist)
-else:
-    print(f"\nA coluna '{target_column}' não foi encontrada no CSV.")
-    print("Colunas disponíveis no arquivo:", list(df.columns))
-    print("\nDica: Se houver classes, altere a variável 'target_column' para o nome correto da coluna.")
+    for value, count in zip(unique, counts):
+        pixel_counts[value] = pixel_counts.get(value, 0) + count
 
-print(f"\nTotal de registros no dataset: {len(df)}")
+# Calcular total de pixels
+total_pixels = sum(pixel_counts.values())
+
+print("\nDistribuição de pixels por classe:")
+for classe, count in pixel_counts.items():
+    percentual = (count / total_pixels) * 100
+    print(f"Classe {classe}: {percentual:.2f}%")
+
+print("\nTotal de máscaras analisadas:", len(os.listdir(MASKS_PATH)))
