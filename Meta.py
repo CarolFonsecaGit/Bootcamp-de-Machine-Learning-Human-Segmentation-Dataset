@@ -4,43 +4,62 @@ from PIL import Image
 
 # --- CONSISTÊNCIA DOS METADADOS ---
 
-# Configurações de caminho
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_PATH, "data")
+DATA_PATH = os.path.join(BASE_PATH, "segmentation_full_body_tik_tok_2615_img")
 
-# Carregar o DataFrame
-df = pd.read_csv(os.path.join(BASE_PATH, "df.csv"))
+df = pd.read_csv(os.path.join(BASE_PATH, "df.csv"), index_col=0)
 
 print("--- Verificação de Valores Ausentes ---")
 print(df.isnull().sum())
 
 print("\n--- Verificação de Inconsistência de Dimensões ---")
+
 inconsistent_dimensions = []
-image_dimensions_map = {}
+files_checked = 0
 
 for index, row in df.iterrows():
-    for col in ["images", "masks", "collages"]:
-        full_path = os.path.join(DATA_PATH, row[col])
-        
-        if os.path.isfile(full_path):
-            try:
-                with Image.open(full_path) as img:
-                    width, height = img.size
-                    
-                    if col == "images":
-                        image_dimensions_map[index] = (width, height)
-                    elif index in image_dimensions_map:
-                        if (width, height) != image_dimensions_map[index]:
-                            inconsistent_dimensions.append({
-                                "arquivo": row[col],
-                                "esperado": image_dimensions_map[index],
-                                "encontrado": (width, height)
-                            })
-            except:
-                continue
 
-print(f"Total de inconsistências de dimensão (máscara/colagem vs imagem): {len(inconsistent_dimensions)}")
+    image_path = os.path.join(DATA_PATH, row["images"])
+    mask_path = os.path.join(DATA_PATH, row["masks"])
+    collage_path = os.path.join(DATA_PATH, row["collages"])
+
+    try:
+        with Image.open(image_path) as img:
+            img_width, img_height = img.size
+
+        with Image.open(mask_path) as mask:
+            mask_width, mask_height = mask.size
+
+        with Image.open(collage_path) as collage:
+            col_width, col_height = collage.size
+
+        files_checked += 3
+
+        # Verifica se máscara tem mesma dimensão da imagem
+        if (mask_width, mask_height) != (img_width, img_height):
+            inconsistent_dimensions.append({
+                "arquivo": row["masks"],
+                "esperado": (img_width, img_height),
+                "encontrado": (mask_width, mask_height)
+            })
+
+        # Verifica se colagem tem mesma dimensão da imagem
+        if (col_width, col_height) != (img_width, img_height):
+            inconsistent_dimensions.append({
+                "arquivo": row["collages"],
+                "esperado": (img_width, img_height),
+                "encontrado": (col_width, col_height)
+            })
+
+    except Exception:
+        continue
+
+print(f"\nTotal de arquivos verificados: {files_checked}")
+print(f"Total de inconsistências de dimensão: {len(inconsistent_dimensions)}")
+
 if inconsistent_dimensions:
-    print("Exemplos de inconsistências:")
+    print("\nExemplos de inconsistências:")
     for item in inconsistent_dimensions[:5]:
         print(f"Arquivo: {item['arquivo']} | Esperado: {item['esperado']} | Encontrado: {item['encontrado']}")
+else:
+    print("\n✅ Todas as imagens, máscaras e colagens possuem dimensões consistentes.")
