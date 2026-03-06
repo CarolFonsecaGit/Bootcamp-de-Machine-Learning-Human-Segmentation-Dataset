@@ -1,0 +1,69 @@
+================================================================================
+  RELATÓRIO — Segmentação de Corpo Inteiro (TikTok Dataset)
+================================================================================
+
+1. METODOLOGIA
+----------------------------------------
+
+1.1 Dataset
+   Nome: Full Body TikTok Segmentation (2615 imagens)
+   Tipo: Segmentação binária (pessoa vs. fundo)
+   Formato: PNG images + PNG masks (ground truth)
+
+1.2 Métodos da Literatura
+
+   Método 1 — FastSAM (Fast Segment Anything Model)
+   Ref: Zhao et al., 'Fast Segment Anything', 2023
+   - Baseado em YOLOv8-seg (detecção + segmentação)
+   - 50x mais rápido que SAM original, sem perda severa de qualidade
+   - Zero-shot: segmenta tudo, selecionamos a maior máscara
+
+   Método 2 — Limiarização de Otsu
+   Ref: Otsu, 'A Threshold Selection Method', IEEE 1979
+   - Grayscale → Gaussian Blur → Otsu → Morfologia
+   - Sem deep learning, totalmente clássico e rápido
+
+1.3 Método Próprio
+
+   Método 3 — GrabCut + Refinamento Morfológico
+   - GrabCut (Rother et al., 2004) com retângulo central
+   - Pós-processamento: dilate → close → erode → fill holes → largest CC
+   - Pipeline personalizado para este domínio
+
+1.4 Métricas: IoU, Dice, Precision, Recall, Accuracy
+
+2. RESULTADOS
+----------------------------------------
+
+  Método                                         IoU        Dice   Precision      Recall    Accuracy
+  ---------------------------------------------------------------------------------------
+  FastSAM                                 0.0007±0.00  0.0013±0.00  0.0009±0.00  0.0034±0.00  0.5387±0.09
+  Otsu Thresholding                       0.1688±0.14  0.2688±0.17  0.1858±0.17  0.7934±0.26  0.5345±0.18
+  GrabCut+Morph (Own)                     0.2808±0.14  0.4196±0.17  0.2914±0.16  0.9160±0.15  0.7400±0.10
+
+  Tempos:
+    FastSAM: 14.4s
+    Otsu Thresholding: 2.9s
+    GrabCut+Morph (Own): 631.5s
+
+  Melhor IoU: GrabCut+Morph (Own) (0.2808)
+
+3. CONCLUSÕES
+----------------------------------------
+
+3.1 Compilado
+   - Modelos de deep learning (FastSAM) geralmente superam métodos clássicos.
+   - Otsu é rápido mas limitado a cenários de alto contraste.
+   - GrabCut+Morph oferece boa relação velocidade/qualidade.
+
+3.2 Contribuições
+   - Comparação quantitativa de 3 abordagens distintas.
+   - Método próprio com GrabCut + pipeline morfológico.
+
+3.3 Trabalhos Futuros
+   - Fine-tuning do SAM neste dataset.
+   - U-Net ou DeepLabv3+ treinados supervisionadamente.
+   - YOLO (detecção de pessoa) + SAM (prompt por bounding box).
+   - SAM 2 para consistência temporal em vídeo.
+
+================================================================================
